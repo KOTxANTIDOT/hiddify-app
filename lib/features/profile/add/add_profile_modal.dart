@@ -12,9 +12,10 @@ import 'package:hiddify/features/profile/notifier/profile_notifier.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+const String kBunkerDefaultUrl = 'https://hub.mos.ru/akelladejavu/bunker/-/raw/main/BLACKxBUNKER.txt';
+
 class AddProfileModal extends HookConsumerWidget {
   const AddProfileModal({super.key, this.url});
-  // static const warpConsentGiven = "warp_consent_given";
   final String? url;
 
   @override
@@ -32,9 +33,10 @@ class AddProfileModal extends HookConsumerWidget {
 
     useMemoized(() async {
       await Future.delayed(const Duration(milliseconds: 200));
-      if (url != null && context.mounted) {
+      final target = url ?? kBunkerDefaultUrl;
+      if (context.mounted) {
         if (isLoading) return;
-        ref.read(addProfileNotifierProvider.notifier).addClipboard(url!);
+        ref.read(addProfileNotifierProvider.notifier).addClipboard(target);
       }
     });
     return SafeArea(
@@ -52,7 +54,6 @@ class AddProfileOptions extends HookConsumerWidget {
   const AddProfileOptions({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final isLoadingProfile = ref.watch(addProfileNotifierProvider).isLoading;
     final freeSwitch = ref.watch(freeSwitchNotifierProvider);
     final isDesktop = PlatformUtils.isDesktop;
     final gapCount = isDesktop ? AddProfileModalConst.fixBtnsGapCountDesktop : AddProfileModalConst.fixBtnsGapCount;
@@ -241,7 +242,6 @@ class AddProfileManual extends HookConsumerWidget {
               ],
             ),
           ),
-          // const Gap(16),
         ],
       ),
     );
