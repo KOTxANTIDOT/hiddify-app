@@ -5,14 +5,14 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
-import 'package:hiddify/features/profile/add/widgets/free_btns.dart';
 import 'package:hiddify/features/profile/add/widgets/widgets.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/profile_notifier.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-const String kBunkerDefaultUrl = 'https://hub.mos.ru/akelladejavu/bunker/-/raw/main/BLACKxBUNKER.txt';
+const String kBunkerBlackUrl = 'https://hub.mos.ru/akelladejavu/bunker/-/raw/main/BLACKxBUNKER.txt';
+const String kBunkerWhiteUrl = 'https://hub.mos.ru/akelladejavu/bunker/-/raw/main/WHITExBUNKER.txt';
 
 class AddProfileModal extends HookConsumerWidget {
   const AddProfileModal({super.key, this.url});
@@ -22,7 +22,6 @@ class AddProfileModal extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = ref.watch(addProfileNotifierProvider).isLoading;
     final currentWidget = ref.watch(addProfilePageNotifierProvider);
-    ref.listen(freeSwitchNotifierProvider, (_, _) {});
     ref.listen(addProfileNotifierProvider, (previous, next) {
       if (next case AsyncData(value: final _?)) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -33,12 +32,12 @@ class AddProfileModal extends HookConsumerWidget {
 
     useMemoized(() async {
       await Future.delayed(const Duration(milliseconds: 200));
-      final target = url ?? kBunkerDefaultUrl;
-      if (context.mounted) {
+      if (url != null && context.mounted) {
         if (isLoading) return;
-        ref.read(addProfileNotifierProvider.notifier).addClipboard(target);
+        ref.read(addProfileNotifierProvider.notifier).addClipboard(url!);
       }
     });
+
     return SafeArea(
       child: isLoading
           ? const ProfileLoading()
@@ -52,38 +51,60 @@ class AddProfileModal extends HookConsumerWidget {
 
 class AddProfileOptions extends HookConsumerWidget {
   const AddProfileOptions({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final freeSwitch = ref.watch(freeSwitchNotifierProvider);
-    final isDesktop = PlatformUtils.isDesktop;
-    final gapCount = isDesktop ? AddProfileModalConst.fixBtnsGapCountDesktop : AddProfileModalConst.fixBtnsGapCount;
-    final itemCount = isDesktop ? AddProfileModalConst.fixBtnsItemCountDesktop : AddProfileModalConst.fixBtnsItemCount;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final fixBtnsHeight = (constraints.maxWidth - AddProfileModalConst.fixBtnsGap * gapCount) / itemCount;
-        final fullHeight = fixBtnsHeight + AddProfileModalConst.navBarHeight + 32;
-        final initial = !freeSwitch ? fullHeight : fullHeight + 180;
-        var min = !freeSwitch ? fullHeight : fullHeight + 100;
-        var max = !freeSwitch ? fullHeight / constraints.maxHeight : 0.85;
-        if (isDesktop) {
-          min = initial;
-          max = initial / constraints.maxHeight;
-        }
-        return DraggableScrollableSheet(
-          initialChildSize: initial / constraints.maxHeight,
-          minChildSize: min / constraints.maxHeight,
-          maxChildSize: max,
-          expand: false,
-          builder: (context, scrollController) => Column(
-            children: [
-              const Gap(AddProfileModalConst.fixBtnsGap),
-              FixBtns(height: fixBtnsHeight),
-              if (freeSwitch) Expanded(child: FreeBtns(scrollController: scrollController)) else const Spacer(),
-              const NavBar(),
-            ],
+    final theme = Theme.of(context);
+    final t = ref.watch(translationsProvider).requireValue;
+    final isLoading = ref.watch(addProfileNotifierProvider).isLoading;
+
+    Future<void> _add(String url, String name) async {
+      await ref.read(addProfileNotifierProvider.notifier).addManual(
+            url: url,
+            userOverride: UserOverride(name: name, updateInterval: 12),
+          );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'BUNKER',
+            style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
-        );
-      },
+          const Gap(20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: isLoading ? null : () => _add(kBunkerBlackUrl, 'BUNKER 🖤 BLACK'),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text('BUNKER 🖤 BLACK', style: TextStyle(fontSize: 16)),
+              ),
+            ),
+          ),
+          const Gap(12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonal(
+              onPressed: isLoading ? null : () => _add(kBunkerWhiteUrl, 'BUNKER 🤍 WHITE'),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text('BUNKER 🤍 WHITE', style: TextStyle(fontSize: 16)),
+              ),
+            ),
+          ),
+          const Gap(24),
+          const Divider(),
+          const Gap(8),
+          TextButton(
+            onPressed: () => ref.read(addProfilePageNotifierProvider.notifier).goManual(),
+            child: Text(t.common.manually),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -213,7 +234,6 @@ class AddProfileManual extends HookConsumerWidget {
                   )
                 : const SizedBox.shrink(),
           ),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 8),
             child: Row(
